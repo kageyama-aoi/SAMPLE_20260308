@@ -40,6 +40,95 @@ header h1 {
   letter-spacing: 0.05em;
 }
 
+/* ===== ヘルプボタン ===== */
+.btn-help {
+  margin-left: auto;
+  background: none;
+  border: 1px solid rgba(255,255,255,0.3);
+  border-radius: 50%;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: #fff;
+  transition: background 0.15s;
+  flex-shrink: 0;
+}
+
+.btn-help:hover,
+.btn-help.active {
+  background: rgba(255,255,255,0.15);
+}
+
+.btn-help .material-icons-round { font-size: 1.3rem !important; }
+
+/* ===== 使い方ガイドパネル ===== */
+.help-panel {
+  background: #1e2d3d;
+  color: #e8edf2;
+  padding: 20px 24px;
+}
+
+.help-inner {
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+.help-inner h2 {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 16px;
+}
+
+.help-inner h2 .material-icons-round { color: #3498db; }
+
+.help-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 12px;
+}
+
+.help-card {
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 8px;
+  padding: 14px 16px;
+}
+
+.help-card-title {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: #7ec8f0;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-bottom: 10px;
+}
+
+.help-card-title .material-icons-round { font-size: 1rem !important; }
+
+.help-card ol,
+.help-card ul {
+  padding-left: 16px;
+  font-size: 0.83rem;
+  line-height: 1.9;
+  color: #c8d6e0;
+}
+
+.help-card code {
+  background: rgba(255,255,255,0.1);
+  padding: 1px 5px;
+  border-radius: 3px;
+  font-size: 0.8rem;
+  font-family: monospace;
+}
+
 /* ===== メイン ===== */
 main {
   max-width: 1100px;
@@ -393,9 +482,12 @@ main {
 /* ===== 月カレンダー ===== */
 .month-grid {
   display: grid;
-  grid-template-columns: repeat(7, 1fr);
+  /* minmax(0,1fr) でセルがコンテンツで広がらないよう固定 */
+  grid-template-columns: repeat(7, minmax(0, 1fr));
   border-top: 1px solid #ddd;
   border-left: 1px solid #ddd;
+  width: 100%;
+  table-layout: fixed;
 }
 
 .month-dow {
@@ -414,6 +506,8 @@ main {
 
 .month-cell {
   min-height: 90px;
+  min-width: 0;      /* グリッド幅を超えないよう制限 */
+  overflow: hidden;
   padding: 4px;
   border-right: 1px solid #e0e0e0;
   border-bottom: 1px solid #e0e0e0;
@@ -430,8 +524,22 @@ main {
   margin-bottom: 3px;
 }
 
-.month-day-num.sun { color: #e53935; }
-.month-day-num.sat { color: #1e88e5; }
+.month-day-num.sun     { color: #e53935; }
+.month-day-num.sat     { color: #1e88e5; }
+.month-day-num.holiday { color: #e65100; }
+
+.holiday-label {
+  font-size: 0.62rem;
+  color: #e65100;
+  font-weight: 600;
+  margin-left: 3px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 60px;
+  display: inline-block;
+  vertical-align: middle;
+}
 
 .today-num {
   background: #3498db;
@@ -491,11 +599,115 @@ main {
   font-weight: 700;
 }
 
-.week-col-header.today-col { background: #3498db; }
-.week-dow { display: block; font-size: 0.7rem; opacity: 0.8; }
-.week-date { display: block; font-size: 0.88rem; }
-.week-col-header.dow-sun .week-dow { color: #ff8a80; }
-.week-col-header.dow-sat .week-dow { color: #82b1ff; }
+/* 土・日・祝日ヘッダー色 */
+.week-col-header.header-sat     { background: #1565c0; } /* 青 */
+.week-col-header.header-sun     { background: #c62828; } /* 赤 */
+.week-col-header.header-holiday { background: #e65100; } /* オレンジ */
+.week-col-header.today-col      { background: #3498db; } /* 今日（優先） */
+
+.week-dow    { display: block; font-size: 0.7rem; opacity: 0.85; }
+.week-date   { display: block; font-size: 0.9rem; font-weight: 700; }
+.week-holiday {
+  display: block;
+  font-size: 0.62rem;
+  opacity: 0.9;
+  font-weight: 400;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* 時間帯ラベル */
+.week-time-label {
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: #888;
+  padding: 4px 2px 1px;
+  margin-top: 2px;
+  border-top: 1px solid #eee;
+  letter-spacing: 0.05em;
+}
+
+.week-time-label:first-child { border-top: none; margin-top: 0; }
+
+/* ===== 印刷ドロップダウン ===== */
+.print-menu-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.print-dropdown {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+  z-index: 100;
+  overflow: hidden;
+  min-width: 200px;
+}
+
+.print-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 10px 16px;
+  border: none;
+  background: none;
+  font-size: 0.88rem;
+  cursor: pointer;
+  text-align: left;
+  font-family: inherit;
+  color: #333;
+  transition: background 0.1s;
+}
+
+.print-option:hover { background: #f0f6ff; }
+.print-option .material-icons-round { color: #3498db; font-size: 1rem !important; }
+
+/* ===== 印刷CSS ===== */
+@media print {
+  /* 印刷時はカレンダー以外を非表示 */
+  body[data-print] #help-panel,
+  body[data-print] header,
+  body[data-print] #input-section,
+  body[data-print] #fallback-section,
+  body[data-print] #preview-section,
+  body[data-print] .tab-bar,
+  body[data-print] .table-controls,
+  body[data-print] .cal-nav,
+  body[data-print] .holiday-status,
+  body[data-print] #tooltip,
+  body[data-print] #tab-list { display: none !important; }
+
+  body[data-print] main { padding: 0; }
+  body[data-print] #view-section { box-shadow: none; padding: 0; }
+
+  /* 月のみ */
+  body[data-print="month"] #tab-week { display: none !important; }
+
+  /* 週のみ */
+  body[data-print="week"] #tab-month { display: none !important; }
+
+  /* 両方：月→週の順で改ページ */
+  body[data-print="both"] #tab-month { page-break-after: always; }
+
+  /* カレンダー内ボタン類も非表示 */
+  @page { margin: 1cm; }
+}
+
+/* 祝日ステータス表示 */
+.holiday-status {
+  font-size: 0.78rem;
+  color: #27ae60;
+  margin-bottom: 8px;
+  min-height: 1em;
+}
+.holiday-status-error { color: #e74c3c; }
 
 .week-col-body {
   padding: 4px;

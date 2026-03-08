@@ -10,14 +10,78 @@ function saveEntries(entries) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(entries));
 }
 
+// ===== 祝日データ =====
+// src/data/holidays.json を fetch して使う。失敗時は空マップ。
+let holidayMap = {};
+
+async function loadHolidays() {
+  try {
+    const res = await fetch('src/data/holidays.json');
+    if (!res.ok) throw new Error();
+    holidayMap = await res.json();
+    setHolidayStatus(`祝日データ読み込み済み（${Object.keys(holidayMap).length}件）`);
+  } catch {
+    setHolidayStatus('祝日データを読み込めませんでした（ローカルサーバー経由で開いてください）', true);
+  }
+  renderCalendars();
+}
+
+function isHoliday(dateKey) { return !!holidayMap[dateKey]; }
+function getHolidayName(dateKey) { return holidayMap[dateKey] || ''; }
+
+function setHolidayStatus(msg, isError = false) {
+  const el = document.getElementById('holiday-status');
+  if (!el) return;
+  el.textContent = msg;
+  el.className = `holiday-status${isError ? ' holiday-status-error' : ''}`;
+}
+
+// 祝日データ更新ボタン：API取得 → holidays.json としてダウンロード
+document.getElementById('holiday-update-btn').addEventListener('click', async () => {
+  const btn = document.getElementById('holiday-update-btn');
+  btn.disabled = true;
+  btn.querySelector('span').textContent = 'sync';
+  setHolidayStatus('APIから取得中...');
+
+  try {
+    // holidays-jp API：YYYY-MM-DD 形式で返ってくる
+    const res = await fetch('https://holidays-jp.github.io/api/v1/date.json');
+    if (!res.ok) throw new Error();
+    const raw = await res.json();
+
+    // YYYY-MM-DD → YYYY/MM/DD に変換
+    const converted = {};
+    for (const [k, v] of Object.entries(raw)) {
+      converted[k.replace(/-/g, '/')] = v;
+    }
+
+    // ダウンロード
+    const blob = new Blob([JSON.stringify(converted, null, 2)], { type: 'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'holidays.json';
+    a.click();
+    URL.revokeObjectURL(a.href);
+
+    // メモリ上のマップも更新
+    holidayMap = converted;
+    renderCalendars();
+    setHolidayStatus(`祝日データを更新しました（${Object.keys(converted).length}件）。ダウンロードしたファイルを src/data/holidays.json に置き換えてください。`);
+  } catch {
+    setHolidayStatus('取得に失敗しました。インターネット接続を確認してください。', true);
+  } finally {
+    btn.disabled = false;
+    btn.querySelector('span').textContent = 'event';
+  }
+});
+
 // ===== 状態 =====
 let sortState = { col: 'date', dir: 'asc' };
 const now = new Date();
 let calMonth = { year: now.getFullYear(), month: now.getMonth() };
-let calWeekStart = getWeekStart(new Date());
+let calWeekStart = getWeekStart(new Date()); // 月曜日
 
 // ===== テキスト解析パーサー =====
-
 function parseText(text) {
   const results = [];
   const urlMatch = text.match(/https?:\/\/\S+/);
@@ -32,7 +96,6 @@ function parseText(text) {
   if (isBullet)  parseBullet(text, url, requester, results);
   if (results.length === 0) parseGeneric(text, url, requester, results);
 
-  // 日付または（ジム名か時間）が取れていない結果は除外
   return results.filter(r => r.date && (r.gym || r.time));
 }
 
@@ -44,10 +107,8 @@ function parseInline(text, url, requester, results) {
     );
     if (m) {
       results.push({
-        date: normalizeDate(m[1]),
-        gym: m[2].trim(),
-        time: m[3].replace('~', '〜'),
-        className: m[4] ? m[4].trim() : '',
+        date: normalizeDate(m[1]), gym: m[2].trim(),
+        time: m[3].replace('~', '〜'), className: m[4] ? m[4].trim() : '',
         requester, deputy: '', status: 'open', url
       });
     }
@@ -57,8 +118,7 @@ function parseInline(text, url, requester, results) {
 function parseBullet(text, url, requester, results) {
   const datePattern = /(\d+月\d+日[（(]\S[)）]|\d+\/\d+[（(]\S[)）])/g;
   const blocks = [];
-  let lastIndex = 0;
-  let match;
+  let lastIndex = 0, match;
   while ((match = datePattern.exec(text)) !== null) {
     if (lastIndex > 0) blocks.push(text.slice(lastIndex, match.index));
     lastIndex = match.index;
@@ -71,9 +131,9 @@ function parseBullet(text, url, requester, results) {
     const gymMatch   = body.match(/場所[：:]\s*(.+)/);
     const timeMatch  = body.match(/時間[：:]\s*(\d+:\d+[〜~]\d+:\d+)/);
     const classMatch = body.match(/プログラム[：:]\s*(.+)/);
-    const gym       = gymMatch   ? gymMatch[1].trim()                    : '';
-    const time      = timeMatch  ? timeMatch[1].replace('~', '〜')       : '';
-    const className = classMatch ? classMatch[1].trim()                  : '';
+    const gym       = gymMatch   ? gymMatch[1].trim()              : '';
+    const time      = timeMatch  ? timeMatch[1].replace('~', '〜') : '';
+    const className = classMatch ? classMatch[1].trim()            : '';
     if (gym || time || className) {
       results.push({ date: normalizeDate(dateMatch[1]), gym, time, className, requester, deputy: '', status: 'open', url });
     }
@@ -221,7 +281,6 @@ function renderTable() {
   `).join('');
 }
 
-// ソートクリック
 document.querySelector('#entries-table thead').addEventListener('click', e => {
   const th = e.target.closest('th.sortable');
   if (!th) return;
@@ -230,12 +289,10 @@ document.querySelector('#entries-table thead').addEventListener('click', e => {
   renderTable();
 });
 
-// テーブルイベント委譲
 document.getElementById('entries-body').addEventListener('click', e => {
   const action = e.target.closest('[data-action]')?.dataset.action;
   const id     = e.target.closest('[data-id]')?.dataset.id;
   if (!action || !id) return;
-
   if (action === 'delete') {
     if (!confirm('この依頼を削除しますか？')) return;
     saveEntries(loadEntries().filter(en => en.id !== id));
@@ -276,6 +333,61 @@ document.getElementById('export-btn').addEventListener('click', () => {
   URL.revokeObjectURL(a.href);
 });
 
+// ===== CSV / TSV エクスポート =====
+const EXPORT_HEADERS = ['日付','ジム名','時間','クラス名','依頼者','代行者','ステータス','URL'];
+const EXPORT_FIELDS  = ['date','gym','time','className','requester','deputy','status','url'];
+
+function statusLabel(s) { return s === 'open' ? '未決' : '対応済み'; }
+
+function toCSV(entries) {
+  const escape = v => {
+    const s = String(v ?? '');
+    // カンマ・ダブルクォート・改行を含む場合はクォートで囲む
+    return /[",\r\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+  };
+  const rows = [
+    EXPORT_HEADERS.map(escape).join(','),
+    ...entries.map(e =>
+      EXPORT_FIELDS.map(f => escape(f === 'status' ? statusLabel(e[f]) : (e[f] ?? ''))).join(',')
+    )
+  ];
+  // Excel用 UTF-8 BOM付き
+  return '\uFEFF' + rows.join('\r\n');
+}
+
+function toTSV(entries) {
+  const escape = v => String(v ?? '').replace(/\t/g, ' ').replace(/\r?\n/g, ' ');
+  const rows = [
+    EXPORT_HEADERS.map(escape).join('\t'),
+    ...entries.map(e =>
+      EXPORT_FIELDS.map(f => escape(f === 'status' ? statusLabel(e[f]) : (e[f] ?? ''))).join('\t')
+    )
+  ];
+  return '\uFEFF' + rows.join('\r\n');
+}
+
+function downloadText(content, filename, mime) {
+  const blob = new Blob([content], { type: mime });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+function dateSuffix() {
+  const d = new Date();
+  return `${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}`;
+}
+
+document.getElementById('export-csv-btn').addEventListener('click', () => {
+  downloadText(toCSV(loadEntries()), `braft_${dateSuffix()}.csv`, 'text/csv;charset=utf-8;');
+});
+
+document.getElementById('export-tsv-btn').addEventListener('click', () => {
+  downloadText(toTSV(loadEntries()), `braft_${dateSuffix()}.tsv`, 'text/tab-separated-values;charset=utf-8;');
+});
+
 // ===== JSON インポート =====
 document.getElementById('import-input').addEventListener('change', e => {
   const file = e.target.files[0];
@@ -303,10 +415,8 @@ document.getElementById('import-input').addEventListener('change', e => {
 document.getElementById('parse-btn').addEventListener('click', () => {
   const text = document.getElementById('input-text').value.trim();
   if (!text) { alert('テキストを貼り付けてください。'); return; }
-
   const parsed = parseText(text);
   document.getElementById('preview-section').classList.add('hidden');
-
   if (parsed.length === 0) {
     showFallback();
   } else {
@@ -323,7 +433,6 @@ function showFallback() {
 }
 
 document.getElementById('show-ai-btn').addEventListener('click', showFallback);
-
 document.getElementById('hide-ai-btn').addEventListener('click', () => {
   document.getElementById('fallback-section').classList.add('hidden');
 });
@@ -347,13 +456,10 @@ ${text}
 ---`;
 
   const feedback = document.getElementById('copy-feedback');
-
-  const doCopy = () => { feedback.classList.remove('hidden'); };
+  const doCopy = () => feedback.classList.remove('hidden');
 
   if (navigator.clipboard && navigator.clipboard.writeText) {
-    navigator.clipboard.writeText(prompt).then(doCopy).catch(() => {
-      legacyCopy(prompt); doCopy();
-    });
+    navigator.clipboard.writeText(prompt).then(doCopy).catch(() => { legacyCopy(prompt); doCopy(); });
   } else {
     legacyCopy(prompt); doCopy();
   }
@@ -362,8 +468,7 @@ ${text}
 function legacyCopy(text) {
   const ta = document.createElement('textarea');
   ta.value = text;
-  ta.style.position = 'fixed';
-  ta.style.opacity = '0';
+  ta.style.cssText = 'position:fixed;opacity:0';
   document.body.appendChild(ta);
   ta.focus(); ta.select();
   document.execCommand('copy');
@@ -398,9 +503,10 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
 const tooltip = document.getElementById('tooltip');
 
 function showTooltip(el, entry) {
+  const holiday = getHolidayName(entry.date);
   tooltip.innerHTML = `
     <strong>${esc(entry.gym) || '（ジム名なし）'}</strong><br>
-    📅 ${esc(entry.date)}<br>
+    📅 ${esc(entry.date)}${holiday ? ` <em>（${esc(holiday)}）</em>` : ''}<br>
     🕐 ${esc(entry.time)}<br>
     🥊 ${esc(entry.className) || '-'}<br>
     依頼者: ${esc(entry.requester) || '-'}<br>
@@ -411,8 +517,8 @@ function showTooltip(el, entry) {
   const rect = el.getBoundingClientRect();
   let top  = rect.bottom + 6;
   let left = rect.left;
-  if (left + 260 > window.innerWidth) left = window.innerWidth - 265;
-  if (top  + 160 > window.innerHeight) top  = rect.top - 164;
+  if (left + 260 > window.innerWidth)  left = window.innerWidth - 265;
+  if (top  + 170 > window.innerHeight) top  = rect.top - 174;
   tooltip.style.top  = top  + 'px';
   tooltip.style.left = left + 'px';
 }
@@ -436,25 +542,31 @@ function entriesByDate() {
 function makeChip(entry) {
   const div = document.createElement('div');
   div.className = `cal-entry ${entry.status === 'open' ? 'entry-open' : 'entry-done'}`;
-  div.textContent = `${entry.gym} ${entry.time}`;
+  const deputyPart = entry.deputy ? ` ✅ ${entry.deputy}` : '';
+  div.textContent = `${entry.gym} ${entry.time}${deputyPart}`;
   div.addEventListener('mouseenter', () => showTooltip(div, entry));
   div.addEventListener('mouseleave', hideTooltip);
   return div;
 }
 
-// ===== 月カレンダー =====
-function getWeekStart(date) {
-  const d = new Date(date);
-  d.setHours(0,0,0,0);
-  d.setDate(d.getDate() - d.getDay());
-  return d;
+// 時間帯判定
+function getTimeGroup(time) {
+  if (!time) return null;
+  const m = time.match(/^(\d+):/);
+  if (!m) return null;
+  const h = parseInt(m[1]);
+  if (h < 12) return 'morning';
+  if (h < 19) return 'daytime';
+  return 'evening';
 }
 
+// ===== 月カレンダー =====
+// 月カレンダーは日曜始まり（一般的なカレンダー表示）
 function renderMonthCalendar() {
   const { year, month } = calMonth;
   document.getElementById('month-label').textContent = `${year}年${month+1}月`;
 
-  const byDate   = entriesByDate();
+  const byDate    = entriesByDate();
   const container = document.getElementById('month-calendar');
   container.innerHTML = '';
   const grid = document.createElement('div');
@@ -467,9 +579,9 @@ function renderMonthCalendar() {
     grid.appendChild(el);
   });
 
-  const firstDay  = new Date(year, month, 1);
-  const lastDay   = new Date(year, month + 1, 0);
-  const todayKey  = dateToKey(new Date());
+  const firstDay = new Date(year, month, 1);
+  const lastDay  = new Date(year, month + 1, 0);
+  const todayKey = dateToKey(new Date());
 
   for (let i = 0; i < firstDay.getDay(); i++) {
     grid.appendChild(makeMonthCell(new Date(year, month, i - firstDay.getDay() + 1), byDate, true, todayKey));
@@ -482,25 +594,32 @@ function renderMonthCalendar() {
   for (let d = 1; d <= remaining; d++) {
     grid.appendChild(makeMonthCell(new Date(year, month + 1, d), byDate, true, todayKey));
   }
-
   container.appendChild(grid);
 }
 
 function makeMonthCell(date, byDate, otherMonth, todayKey) {
-  const cell = document.createElement('div');
   const key  = dateToKey(date);
+  const dow  = date.getDay();
+  const holiday = getHolidayName(key);
+  const cell = document.createElement('div');
   cell.className = `month-cell${otherMonth ? ' other-month' : ''}${key === todayKey ? ' today' : ''}`;
 
-  const dow   = date.getDay();
   const numEl = document.createElement('div');
-  numEl.className = `month-day-num${dow === 0 ? ' sun' : dow === 6 ? ' sat' : ''}`;
+  numEl.className = `month-day-num${holiday ? ' holiday' : dow === 0 ? ' sun' : dow === 6 ? ' sat' : ''}`;
 
   const numSpan = document.createElement('span');
   if (key === todayKey) numSpan.className = 'today-num';
   numSpan.textContent = date.getDate();
   numEl.appendChild(numSpan);
-  cell.appendChild(numEl);
 
+  if (holiday) {
+    const hLabel = document.createElement('span');
+    hLabel.className = 'holiday-label';
+    hLabel.textContent = holiday;
+    numEl.appendChild(hLabel);
+  }
+
+  cell.appendChild(numEl);
   (byDate[key] || []).forEach(entry => cell.appendChild(makeChip(entry)));
   return cell;
 }
@@ -516,40 +635,89 @@ document.getElementById('month-next').addEventListener('click', () => {
   renderMonthCalendar();
 });
 
-// ===== 週カレンダー =====
+// ===== 週カレンダー（月曜始まり） =====
+function getWeekStart(date) {
+  const d = new Date(date);
+  d.setHours(0, 0, 0, 0);
+  const day = d.getDay(); // 0=Sun
+  const diff = day === 0 ? -6 : 1 - day; // 月曜日に合わせる
+  d.setDate(d.getDate() + diff);
+  return d;
+}
+
 function renderWeekCalendar() {
   const weekEnd = new Date(calWeekStart);
   weekEnd.setDate(weekEnd.getDate() + 6);
   const fmt = d => `${d.getMonth()+1}/${d.getDate()}`;
-  document.getElementById('week-label').textContent = `${fmt(calWeekStart)} 〜 ${fmt(weekEnd)}`;
+  document.getElementById('week-label').textContent = `${fmt(calWeekStart)}（月）〜 ${fmt(weekEnd)}（日）`;
 
-  const byDate  = entriesByDate();
+  const byDate   = entriesByDate();
   const todayKey = dateToKey(new Date());
   const container = document.getElementById('week-calendar');
   container.innerHTML = '';
   const grid = document.createElement('div');
   grid.className = 'week-grid';
 
-  const dows    = ['日','月','火','水','木','金','土'];
-  const dowCls  = ['dow-sun','','','','','','dow-sat'];
+  // 月〜日の順
+  const dowLabels = ['月','火','水','木','金','土','日'];
+  const dowDays   = [1, 2, 3, 4, 5, 6, 0]; // getDay()対応
 
   for (let i = 0; i < 7; i++) {
-    const date = new Date(calWeekStart);
+    const date    = new Date(calWeekStart);
     date.setDate(date.getDate() + i);
     const key     = dateToKey(date);
-    const isToday = key === todayKey;
+    const dow     = date.getDay(); // 0=Sun, 6=Sat
+    const isToday   = key === todayKey;
+    const holiday   = getHolidayName(key);
+    const isSat     = dow === 6;
+    const isSun     = dow === 0;
 
     const col = document.createElement('div');
     col.className = 'week-col';
 
+    // ヘッダー
     const header = document.createElement('div');
-    header.className = `week-col-header ${dowCls[i]}${isToday ? ' today-col' : ''}`;
-    header.innerHTML = `<span class="week-dow">${dows[i]}</span><span class="week-date">${date.getMonth()+1}/${date.getDate()}</span>`;
+    let headerCls = 'week-col-header';
+    if (holiday)    headerCls += ' header-holiday';
+    else if (isSun) headerCls += ' header-sun';
+    else if (isSat) headerCls += ' header-sat';
+    if (isToday)    headerCls += ' today-col';
+    header.className = headerCls;
+    header.innerHTML = `
+      <span class="week-dow">${dowLabels[i]}</span>
+      <span class="week-date">${date.getMonth()+1}/${date.getDate()}</span>
+      ${holiday ? `<span class="week-holiday">${esc(holiday)}</span>` : ''}
+    `;
     col.appendChild(header);
+
+    // 時間帯グループ
+    const dayEntries = byDate[key] || [];
+    const groups = [
+      { key: 'morning',  label: '午前',  entries: [] },
+      { key: 'daytime',  label: '昼間',  entries: [] },
+      { key: 'evening',  label: '夜間',  entries: [] },
+      { key: 'none',     label: '',      entries: [] },
+    ];
+    dayEntries.forEach(entry => {
+      const g = getTimeGroup(entry.time);
+      const group = groups.find(gr => gr.key === (g || 'none'));
+      group.entries.push(entry);
+    });
 
     const body = document.createElement('div');
     body.className = 'week-col-body';
-    (byDate[key] || []).forEach(entry => body.appendChild(makeChip(entry)));
+
+    groups.forEach(group => {
+      if (group.entries.length === 0) return;
+      if (group.label) {
+        const label = document.createElement('div');
+        label.className = 'week-time-label';
+        label.textContent = group.label;
+        body.appendChild(label);
+      }
+      group.entries.forEach(entry => body.appendChild(makeChip(entry)));
+    });
+
     col.appendChild(body);
     grid.appendChild(col);
   }
@@ -576,6 +744,59 @@ function esc(str) {
     .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
+// ===== 印刷 =====
+const printMenuBtn  = document.getElementById('print-menu-btn');
+const printDropdown = document.getElementById('print-dropdown');
+
+printMenuBtn.addEventListener('click', e => {
+  e.stopPropagation();
+  printDropdown.classList.toggle('hidden');
+});
+
+document.addEventListener('click', () => printDropdown.classList.add('hidden'));
+
+document.querySelectorAll('.print-option').forEach(btn => {
+  btn.addEventListener('click', e => {
+    e.stopPropagation();
+    printDropdown.classList.add('hidden');
+    printCalendar(btn.dataset.target);
+  });
+});
+
+function printCalendar(target) {
+  // 印刷前に対象タブを一時的に表示
+  const monthTab = document.getElementById('tab-month');
+  const weekTab  = document.getElementById('tab-week');
+  const prevMonthHidden = monthTab.classList.contains('hidden');
+  const prevWeekHidden  = weekTab.classList.contains('hidden');
+
+  if (target === 'month' || target === 'both') monthTab.classList.remove('hidden');
+  if (target === 'week'  || target === 'both') weekTab.classList.remove('hidden');
+  if (target === 'month') weekTab.classList.add('hidden');
+  if (target === 'week')  monthTab.classList.add('hidden');
+
+  document.body.dataset.print = target;
+  window.print();
+}
+
+window.addEventListener('afterprint', () => {
+  delete document.body.dataset.print;
+  // 印刷後はタブ表示を元に戻す（アクティブタブのみ表示）
+  const activeTab = document.querySelector('.tab-btn.active')?.dataset.tab;
+  document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden'));
+  if (activeTab) document.getElementById(`tab-${activeTab}`)?.classList.remove('hidden');
+});
+
+// ===== 使い方ガイド =====
+document.getElementById('help-btn').addEventListener('click', () => {
+  const panel = document.getElementById('help-panel');
+  const btn   = document.getElementById('help-btn');
+  const isOpen = !panel.classList.contains('hidden');
+  panel.classList.toggle('hidden', isOpen);
+  btn.classList.toggle('active', !isOpen);
+  btn.setAttribute('aria-expanded', String(!isOpen));
+});
+
 // ===== 初期描画 =====
 renderTable();
-renderCalendars();
+loadHolidays(); // 非同期で祝日読み込み → 完了後 renderCalendars() が呼ばれる

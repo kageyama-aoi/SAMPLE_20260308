@@ -11,7 +11,79 @@
   <header>
     <span class="material-icons-round header-icon">fitness_center</span>
     <h1>BRAFT 代行情報整理</h1>
+    <button id="help-btn" class="btn-help" aria-expanded="false" title="使い方ガイド">
+      <span class="material-icons-round">help_outline</span>
+    </button>
   </header>
+
+  <!-- 使い方ガイド（折りたたみ） -->
+  <div id="help-panel" class="help-panel hidden">
+    <div class="help-inner">
+      <h2><span class="material-icons-round">menu_book</span> 使い方ガイド</h2>
+      <div class="help-grid">
+
+        <div class="help-card">
+          <div class="help-card-title"><span class="material-icons-round">auto_awesome</span> テキストを解析する</div>
+          <ol>
+            <li>代行依頼のメッセージをテキストエリアにコピペ</li>
+            <li>「解析する」ボタンを押す</li>
+            <li>解析結果を確認・修正して「すべて登録する」</li>
+          </ol>
+        </div>
+
+        <div class="help-card">
+          <div class="help-card-title"><span class="material-icons-round">smart_toy</span> うまく解析できない場合</div>
+          <ol>
+            <li>「うまく解析できない場合」をクリック</li>
+            <li>「プロンプトをコピー」でコピー</li>
+            <li>ChatGPT や Claude に貼り付けて解析してもらう</li>
+            <li>結果の JSON を「インポート」から取り込む</li>
+          </ol>
+        </div>
+
+        <div class="help-card">
+          <div class="help-card-title"><span class="material-icons-round">table_rows</span> 一覧テーブル</div>
+          <ul>
+            <li>列ヘッダーをクリック → ソート（▲▼）</li>
+            <li>「未決のみ表示」チェック → フィルター</li>
+            <li>依頼者・代行者欄は直接入力で編集可</li>
+            <li>ステータスバッジをクリック → 未決 ↔ 対応済み</li>
+            <li><span class="material-icons-round" style="font-size:1em;vertical-align:middle">delete</span> ボタンで削除</li>
+          </ul>
+        </div>
+
+        <div class="help-card">
+          <div class="help-card-title"><span class="material-icons-round">file_download</span> データのバックアップ</div>
+          <ul>
+            <li>「エクスポート」→ JSON ファイルとして保存</li>
+            <li>「インポート」→ JSON ファイルを読み込んで追加</li>
+            <li>データはブラウザ内（localStorage）に保存されます</li>
+          </ul>
+        </div>
+
+        <div class="help-card">
+          <div class="help-card-title"><span class="material-icons-round">calendar_month</span> カレンダービュー</div>
+          <ul>
+            <li>タブで「月カレンダー」「週カレンダー」を切替</li>
+            <li>◀ ▶ で月・週を移動</li>
+            <li>チップにマウスを乗せると詳細が表示</li>
+            <li>週カレンダーは午前 / 昼間 / 夜間 で分類表示</li>
+          </ul>
+        </div>
+
+        <div class="help-card">
+          <div class="help-card-title"><span class="material-icons-round">event</span> 祝日データの更新</div>
+          <ul>
+            <li>週カレンダー画面の「祝日データを更新」をクリック</li>
+            <li>ダウンロードされた <code>holidays.json</code> を</li>
+            <li><code>src/data/</code> フォルダに上書きして完了</li>
+            <li>※ ローカルサーバー経由で開く必要があります</li>
+          </ul>
+        </div>
+
+      </div>
+    </div>
+  </div>
 
   <main>
     <!-- 入力エリア -->
@@ -71,6 +143,22 @@
         <button class="tab-btn" data-tab="week">
           <span class="material-icons-round">view_week</span>週カレンダー
         </button>
+        <div class="print-menu-wrap" style="margin-left:auto">
+          <button id="print-menu-btn" class="btn btn-sm btn-outline">
+            <span class="material-icons-round">print</span>印刷
+          </button>
+          <div id="print-dropdown" class="print-dropdown hidden">
+            <button class="print-option" data-target="month">
+              <span class="material-icons-round">calendar_month</span>月カレンダーを印刷
+            </button>
+            <button class="print-option" data-target="week">
+              <span class="material-icons-round">view_week</span>週カレンダーを印刷
+            </button>
+            <button class="print-option" data-target="both">
+              <span class="material-icons-round">print</span>両方印刷
+            </button>
+          </div>
+        </div>
       </div>
 
       <!-- 一覧タブ -->
@@ -84,7 +172,13 @@
             </label>
             <div class="json-btns">
               <button id="export-btn" class="btn btn-sm btn-outline">
-                <span class="material-icons-round">file_download</span>エクスポート
+                <span class="material-icons-round">file_download</span>JSON
+              </button>
+              <button id="export-csv-btn" class="btn btn-sm btn-outline">
+                <span class="material-icons-round">table_chart</span>CSV
+              </button>
+              <button id="export-tsv-btn" class="btn btn-sm btn-outline">
+                <span class="material-icons-round">grid_on</span>TSV
               </button>
               <label class="btn btn-sm btn-outline" style="cursor:pointer">
                 <span class="material-icons-round">file_upload</span>インポート
@@ -141,7 +235,11 @@
           <button id="week-next" class="btn btn-sm btn-outline">
             <span class="material-icons-round">chevron_right</span>
           </button>
+          <button id="holiday-update-btn" class="btn btn-sm btn-outline" style="margin-left:auto" title="APIから最新の祝日データを取得してダウンロードします">
+            <span class="material-icons-round">event</span>祝日データを更新
+          </button>
         </div>
+        <p id="holiday-status" class="holiday-status"></p>
         <div id="week-calendar"></div>
       </div>
 
