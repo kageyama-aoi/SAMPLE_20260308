@@ -1,0 +1,94 @@
+name: 🐛 バグ報告
+description: 予期しない動作や不具合を報告する
+title: "[BUG] "
+labels: ["bug", "needs-triage"]
+assignees: []
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## バグ報告フォーム
+        再現手順や環境情報をできるだけ詳しく記入してください。
+
+  - type: dropdown
+    id: severity
+    attributes:
+      label: 深刻度
+      description: このバグはどの程度の影響がありますか？
+      options:
+        - 🔴 Critical（システム停止・データ損失）
+        - 🟠 High（主要機能が使えない）
+        - 🟡 Medium（一部機能に影響）
+        - 🟢 Low（軽微な問題）
+    validations:
+      required: true
+
+  - type: dropdown
+    id: component
+    attributes:
+      label: 発生箇所
+      description: どのコンポーネント・機能で発生しましたか？
+      options:
+        - フロントエンド（UI）
+        - バックエンド（API）
+        - データベース
+        - 認証・権限
+        - その他
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: バグの概要
+      description: 何が起きているか簡潔に説明してください。
+      placeholder: 例）ログインボタンを押すと500エラーが返る
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: 再現手順
+      description: バグを再現するための手順を記入してください。
+      value: |
+        1. 
+        2. 
+        3. 
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: 期待する動作
+      placeholder: 本来どのような動作をすべきか記入してください。
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: 実際の動作
+      placeholder: 実際にどのような動作をするか記入してください。
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: 環境情報
+      value: |
+        - OS: 
+        - ブラウザ/ランタイム: 
+        - バージョン: 
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: 提出前チェックリスト
+      options:
+        - label: 既存のIssueに同じ内容がないか確認した
+          required: true
+        - label: 最新バージョンで再現することを確認した
+          required: true
+        - label: スクリーンショットまたはログを添付できる（任意）

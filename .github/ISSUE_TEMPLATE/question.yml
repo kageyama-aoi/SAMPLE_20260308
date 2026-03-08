@@ -1,0 +1,67 @@
+name: 💬 質問・相談
+description: 技術的な質問や設計の相談を投げる
+title: "[QUESTION] "
+labels: ["question"]
+assignees: []
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## 質問・相談フォーム
+        疑問点や相談内容を記入してください。  
+        解決したらIssueをクローズするか、Discussionへの移動を検討してください。
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: 質問の領域
+      options:
+        - アーキテクチャ・設計
+        - 実装方法
+        - ツール・ライブラリの使い方
+        - 運用・インフラ
+        - その他
+    validations:
+      required: true
+
+  - type: textarea
+    id: question
+    attributes:
+      label: 質問・相談内容
+      description: 何を知りたいか、何で迷っているかを具体的に書いてください。
+      placeholder: 例）GitHub Actionsでmatrix strategyを使うとき、特定のジョブだけスキップする方法がわからない。
+    validations:
+      required: true
+
+  - type: textarea
+    id: tried
+    attributes:
+      label: 試したこと・調べたこと
+      description: すでに試したこと、調べたことを記入してください。
+      placeholder: |
+        - 公式ドキュメントを確認したが…
+        - ○○で試したが△△という結果になった
+
+  - type: textarea
+    id: context
+    attributes:
+      label: 関連するコードや設定
+      description: 関係するコードスニペットや設定ファイルがあれば貼ってください。
+      render: yaml
+
+  - type: input
+    id: deadline
+    attributes:
+      label: 回答希望期限（任意）
+      placeholder: 例）2025-07-25
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: 確認事項
+      options:
+        - label: ドキュメントやREADMEを確認した
+          required: true
+        - label: 既存のIssue・Discussionを検索した
+          required: true
