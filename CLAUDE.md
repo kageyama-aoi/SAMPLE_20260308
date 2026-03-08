@@ -1,0 +1,1 @@
+.agent/skills/make_project/SKILL.md を読んで、その手順に従ってプロジェクトを初期化すること。
