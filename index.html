@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BRAFT 代行情報整理</title>
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
+  <link rel="stylesheet" href="src/css/style.css">
+</head>
+<body>
+  <header>
+    <span class="material-icons-round header-icon">fitness_center</span>
+    <h1>BRAFT 代行情報整理</h1>
+  </header>
+
+  <main>
+    <!-- 入力エリア -->
+    <section class="section" id="input-section">
+      <h2><span class="material-icons-round section-icon">edit_note</span>代行依頼テキストを貼り付け</h2>
+      <textarea id="input-text" placeholder="代行依頼のメッセージをここにコピペしてください..."></textarea>
+      <div class="input-actions">
+        <button id="parse-btn" class="btn btn-primary">
+          <span class="material-icons-round">auto_awesome</span>解析する
+        </button>
+        <button id="show-ai-btn" class="btn btn-text">
+          <span class="material-icons-round">smart_toy</span>うまく解析できない場合
+        </button>
+      </div>
+    </section>
+
+    <!-- AIフォールバックUI -->
+    <section class="section hidden" id="fallback-section">
+      <div class="fallback-box">
+        <p class="fallback-msg">
+          <span class="material-icons-round">warning</span>
+          AIに解析してもらいましょう
+        </p>
+        <p>下のボタンでプロンプトをコピーして、ChatGPTやClaudeに貼り付けてください。</p>
+        <button id="copy-prompt-btn" class="btn btn-secondary">
+          <span class="material-icons-round">content_copy</span>プロンプトをコピー
+        </button>
+        <p class="copy-feedback hidden" id="copy-feedback">
+          <span class="material-icons-round">check_circle</span>コピーしました！ChatGPTやClaudeに貼り付けてください。
+        </p>
+        <button id="hide-ai-btn" class="btn btn-text" style="margin-top:8px">
+          <span class="material-icons-round">close</span>閉じる
+        </button>
+      </div>
+    </section>
+
+    <!-- プレビューエリア -->
+    <section class="section hidden" id="preview-section">
+      <h2><span class="material-icons-round section-icon">preview</span>解析結果の確認・修正</h2>
+      <div id="preview-list"></div>
+      <button id="register-btn" class="btn btn-primary">
+        <span class="material-icons-round">add_task</span>すべて登録する
+      </button>
+    </section>
+
+    <!-- 一覧・カレンダーセクション -->
+    <section class="section" id="view-section">
+
+      <!-- タブバー -->
+      <div class="tab-bar">
+        <button class="tab-btn active" data-tab="list">
+          <span class="material-icons-round">list</span>一覧
+        </button>
+        <button class="tab-btn" data-tab="month">
+          <span class="material-icons-round">calendar_month</span>月カレンダー
+        </button>
+        <button class="tab-btn" data-tab="week">
+          <span class="material-icons-round">view_week</span>週カレンダー
+        </button>
+      </div>
+
+      <!-- 一覧タブ -->
+      <div class="tab-content" id="tab-list">
+        <div class="table-header">
+          <h2><span class="material-icons-round section-icon">table_rows</span>代行依頼一覧</h2>
+          <div class="table-controls">
+            <label class="filter-area">
+              <span class="material-icons-round">filter_list</span>
+              <input type="checkbox" id="filter-open"> 未決のみ表示
+            </label>
+            <div class="json-btns">
+              <button id="export-btn" class="btn btn-sm btn-outline">
+                <span class="material-icons-round">file_download</span>エクスポート
+              </button>
+              <label class="btn btn-sm btn-outline" style="cursor:pointer">
+                <span class="material-icons-round">file_upload</span>インポート
+                <input type="file" id="import-input" accept=".json" style="display:none">
+              </label>
+            </div>
+          </div>
+        </div>
+        <div class="table-wrapper">
+          <table id="entries-table">
+            <thead>
+              <tr>
+                <th class="sortable" data-col="date">日付 <span class="sort-icon"></span></th>
+                <th class="sortable" data-col="gym">ジム名 <span class="sort-icon"></span></th>
+                <th class="sortable" data-col="time">時間 <span class="sort-icon"></span></th>
+                <th class="sortable" data-col="className">クラス名 <span class="sort-icon"></span></th>
+                <th>依頼者</th>
+                <th>代行者</th>
+                <th class="sortable" data-col="status">ステータス <span class="sort-icon"></span></th>
+                <th>URL</th>
+                <th>操作</th>
+              </tr>
+            </thead>
+            <tbody id="entries-body"></tbody>
+          </table>
+          <p class="empty-msg hidden" id="empty-msg">
+            <span class="material-icons-round" style="font-size:2rem;display:block;margin-bottom:6px">inbox</span>
+            登録された代行依頼はありません。
+          </p>
+        </div>
+      </div>
+
+      <!-- 月カレンダータブ -->
+      <div class="tab-content hidden" id="tab-month">
+        <div class="cal-nav">
+          <button id="month-prev" class="btn btn-sm btn-outline">
+            <span class="material-icons-round">chevron_left</span>
+          </button>
+          <span id="month-label" class="cal-label"></span>
+          <button id="month-next" class="btn btn-sm btn-outline">
+            <span class="material-icons-round">chevron_right</span>
+          </button>
+        </div>
+        <div id="month-calendar"></div>
+      </div>
+
+      <!-- 週カレンダータブ -->
+      <div class="tab-content hidden" id="tab-week">
+        <div class="cal-nav">
+          <button id="week-prev" class="btn btn-sm btn-outline">
+            <span class="material-icons-round">chevron_left</span>
+          </button>
+          <span id="week-label" class="cal-label"></span>
+          <button id="week-next" class="btn btn-sm btn-outline">
+            <span class="material-icons-round">chevron_right</span>
+          </button>
+        </div>
+        <div id="week-calendar"></div>
+      </div>
+
+    </section>
+  </main>
+
+  <!-- ホバーツールチップ -->
+  <div id="tooltip" class="tooltip hidden"></div>
+
+  <script src="src/js/app.js"></script>
+</body>
+</html>
