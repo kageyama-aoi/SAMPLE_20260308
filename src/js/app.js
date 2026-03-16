@@ -772,7 +772,13 @@ function printCalendar(target) {
     listTab.classList.remove('hidden');
     monthTab.classList.add('hidden');
     weekTab.classList.add('hidden');
+    // 一覧は横向きA4
+    const s = document.createElement('style');
+    s.id = 'print-page-style';
+    s.textContent = '@page { size: A4 landscape; margin: 1cm; }';
+    document.head.appendChild(s);
   } else {
+    document.getElementById('print-page-style')?.remove();
     listTab.classList.add('hidden');
     if (target === 'month' || target === 'both') monthTab.classList.remove('hidden');
     if (target === 'week'  || target === 'both') weekTab.classList.remove('hidden');
@@ -786,6 +792,7 @@ function printCalendar(target) {
 
 window.addEventListener('afterprint', () => {
   delete document.body.dataset.print;
+  document.getElementById('print-page-style')?.remove();
   // 印刷後はタブ表示を元に戻す（アクティブタブのみ表示）
   const activeTab = document.querySelector('.tab-btn.active')?.dataset.tab;
   document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden'));
