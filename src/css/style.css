@@ -671,32 +671,88 @@ main {
 
 /* ===== 印刷CSS ===== */
 @media print {
-  /* 印刷時はカレンダー以外を非表示 */
+  /* 共通：不要なUI非表示 */
   body[data-print] #help-panel,
   body[data-print] header,
   body[data-print] #input-section,
   body[data-print] #fallback-section,
   body[data-print] #preview-section,
   body[data-print] .tab-bar,
-  body[data-print] .table-controls,
   body[data-print] .cal-nav,
   body[data-print] .holiday-status,
   body[data-print] #tooltip,
-  body[data-print] #tab-list { display: none !important; }
+  body[data-print] #qr-modal { display: none !important; }
 
   body[data-print] main { padding: 0; }
   body[data-print] #view-section { box-shadow: none; padding: 0; }
 
-  /* 月のみ */
+  /* ===== 一覧印刷 ===== */
+  body[data-print="list"] #tab-month,
+  body[data-print="list"] #tab-week { display: none !important; }
+
+  body[data-print="list"] .table-controls { display: none !important; }
+
+  body[data-print="list"] #tab-list { display: block !important; }
+
+  body[data-print="list"] .table-wrapper {
+    overflow: visible;
+  }
+
+  body[data-print="list"] #entries-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 10pt;
+  }
+
+  body[data-print="list"] #entries-table th,
+  body[data-print="list"] #entries-table td {
+    border: 1px solid #999;
+    padding: 4px 6px;
+    word-break: break-word;
+  }
+
+  body[data-print="list"] #entries-table thead th {
+    background: #e0e0e0 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* 操作列（削除ボタン）は非表示 */
+  body[data-print="list"] #entries-table th:last-child,
+  body[data-print="list"] #entries-table td:last-child { display: none !important; }
+
+  /* 依頼者・代行者のinputをテキストとして見せる */
+  body[data-print="list"] #entries-table input[type="text"] {
+    border: none;
+    background: transparent;
+    padding: 0;
+    width: 100%;
+    font-size: inherit;
+    font-family: inherit;
+  }
+
+  /* ステータスバッジ */
+  body[data-print="list"] .status-badge {
+    font-size: 9pt;
+    padding: 2px 5px;
+  }
+
+  /* リンク：URLを表示してクリッカブルに */
+  body[data-print="list"] #entries-table a {
+    color: #1565c0;
+    text-decoration: underline;
+  }
+
+  /* ===== カレンダー印刷 ===== */
+  body[data-print="month"] #tab-list,
   body[data-print="month"] #tab-week { display: none !important; }
 
-  /* 週のみ */
+  body[data-print="week"] #tab-list,
   body[data-print="week"] #tab-month { display: none !important; }
 
-  /* 両方：月→週の順で改ページ */
+  body[data-print="both"] #tab-list { display: none !important; }
   body[data-print="both"] #tab-month { page-break-after: always; }
 
-  /* カレンダー内ボタン類も非表示 */
   @page { margin: 1cm; }
 }
 

@@ -764,16 +764,21 @@ document.querySelectorAll('.print-option').forEach(btn => {
 });
 
 function printCalendar(target) {
-  // 印刷前に対象タブを一時的に表示
+  const listTab  = document.getElementById('tab-list');
   const monthTab = document.getElementById('tab-month');
   const weekTab  = document.getElementById('tab-week');
-  const prevMonthHidden = monthTab.classList.contains('hidden');
-  const prevWeekHidden  = weekTab.classList.contains('hidden');
 
-  if (target === 'month' || target === 'both') monthTab.classList.remove('hidden');
-  if (target === 'week'  || target === 'both') weekTab.classList.remove('hidden');
-  if (target === 'month') weekTab.classList.add('hidden');
-  if (target === 'week')  monthTab.classList.add('hidden');
+  if (target === 'list') {
+    listTab.classList.remove('hidden');
+    monthTab.classList.add('hidden');
+    weekTab.classList.add('hidden');
+  } else {
+    listTab.classList.add('hidden');
+    if (target === 'month' || target === 'both') monthTab.classList.remove('hidden');
+    if (target === 'week'  || target === 'both') weekTab.classList.remove('hidden');
+    if (target === 'month') weekTab.classList.add('hidden');
+    if (target === 'week')  monthTab.classList.add('hidden');
+  }
 
   document.body.dataset.print = target;
   window.print();
