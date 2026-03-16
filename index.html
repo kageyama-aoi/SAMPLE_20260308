@@ -259,6 +259,32 @@
   <!-- ホバーツールチップ -->
   <div id="tooltip" class="tooltip hidden"></div>
 
+  <!-- 共有ビュー（#share= で開いた時に表示） -->
+  <div id="share-view" class="share-view hidden">
+    <div class="share-view-header">
+      <span class="material-icons-round">fitness_center</span>
+      <h1>BRAFT 代行一覧</h1>
+      <span id="share-view-date" class="share-view-date"></span>
+    </div>
+    <div class="share-view-body">
+      <div class="table-wrapper">
+        <table id="share-table">
+          <thead>
+            <tr>
+              <th>日付</th><th>ジム名</th><th>時間</th><th>クラス名</th>
+              <th>依頼者</th><th>代行者</th><th>状態</th><th>URL</th>
+            </tr>
+          </thead>
+          <tbody id="share-table-body"></tbody>
+        </table>
+        <p class="empty-msg hidden" id="share-empty-msg">
+          <span class="material-icons-round" style="font-size:2rem;display:block;margin-bottom:6px">inbox</span>
+          データがありません。
+        </p>
+      </div>
+    </div>
+  </div>
+
   <!-- QRコードモーダル -->
   <div id="qr-modal" class="qr-modal hidden" role="dialog" aria-modal="true" aria-labelledby="qr-modal-title">
     <div class="qr-modal-inner">

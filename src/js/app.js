@@ -828,16 +828,12 @@ document.getElementById('help-btn').addEventListener('click', () => {
   btn.setAttribute('aria-expanded', String(!isOpen));
 });
 
-// ===== QRコード生成 =====
-function buildShareHTML(entries) {
-  const rows = entries.map(e => {
-    const urlCell = e.url
-      ? `<a href="${esc(e.url)}" target="_blank">調整さん</a>`
-      : '';
-    const statusLabel = e.status === 'open' ? '⚠️未決' : '✅済';
-    return `<tr><td>${esc(e.date)}</td><td>${esc(e.gym)}</td><td>${esc(e.time)}</td><td>${esc(e.className)}</td><td>${esc(e.requester)}</td><td>${esc(e.deputy)}</td><td>${statusLabel}</td><td>${urlCell}</td></tr>`;
-  }).join('');
-  return `<!DOCTYPE html><html lang="ja"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>BRAFT代行一覧</title><style>body{font-family:sans-serif;font-size:13px;padding:10px}h2{margin-bottom:8px;font-size:1rem}table{border-collapse:collapse;width:100%}th,td{border:1px solid #ccc;padding:4px 6px;text-align:left;vertical-align:top}th{background:#f0f0f0;white-space:nowrap}a{color:#1565c0}</style></head><body><h2>BRAFT代行一覧</h2><table><thead><tr><th>日付</th><th>ジム</th><th>時間</th><th>クラス</th><th>依頼者</th><th>代行者</th><th>状態</th><th>URL</th></tr></thead><tbody>${rows}</tbody></table></body></html>`;
+// ===== QRコード生成（URL形式） =====
+function buildShareUrl(entries) {
+  const json = JSON.stringify(entries);
+  const b64  = btoa(unescape(encodeURIComponent(json)));
+  const base = location.href.split('#')[0];
+  return base + '#share=' + b64;
 }
 
 document.getElementById('qr-btn').addEventListener('click', () => {
@@ -856,12 +852,19 @@ document.getElementById('qr-btn').addEventListener('click', () => {
     return;
   }
 
-  const html    = buildShareHTML(entries);
-  const dataUrl = 'data:text/html;charset=utf-8,' + encodeURIComponent(html);
+  // localhostの場合は案内を表示
+  const isLocalhost = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+  if (isLocalhost) {
+    errEl.textContent = 'スマホからアクセスするには、PCのIPアドレスで開き直してください。（例：http://192.168.1.XX:5500/）';
+    errEl.classList.remove('hidden');
+    modal.classList.remove('hidden');
+    return;
+  }
 
-  // QRコードの上限は約2953バイト（バイナリL）。大きすぎる場合は警告
-  if (dataUrl.length > 2800) {
-    errEl.textContent = `データが多すぎてQRコードを生成できません（${entries.length}件）。フィルターで件数を絞ってからお試しください。`;
+  const shareUrl = buildShareUrl(entries);
+
+  if (shareUrl.length > 2900) {
+    errEl.textContent = `データが多すぎます（${entries.length}件）。「今日以降のみ」フィルターで件数を絞ってからお試しください。`;
     errEl.classList.remove('hidden');
     modal.classList.remove('hidden');
     return;
@@ -870,7 +873,7 @@ document.getElementById('qr-btn').addEventListener('click', () => {
   const canvas = document.createElement('canvas');
   wrap.appendChild(canvas);
 
-  QRCode.toCanvas(canvas, dataUrl, { width: 256, errorCorrectionLevel: 'L' }, err => {
+  QRCode.toCanvas(canvas, shareUrl, { width: 256, errorCorrectionLevel: 'L' }, err => {
     if (err) {
       wrap.innerHTML = '';
       errEl.textContent = 'QRコードの生成に失敗しました。';
@@ -880,6 +883,55 @@ document.getElementById('qr-btn').addEventListener('click', () => {
 
   modal.classList.remove('hidden');
 });
+
+// ===== 共有ビュー（#share= で開いた時） =====
+function initShareView() {
+  const hash = location.hash;
+  if (!hash.startsWith('#share=')) return;
+
+  const b64 = hash.slice('#share='.length);
+  let entries;
+  try {
+    entries = JSON.parse(decodeURIComponent(escape(atob(b64))));
+  } catch {
+    return;
+  }
+
+  // 通常UIを非表示にして共有ビューを表示
+  document.querySelector('header').classList.add('hidden');
+  document.querySelector('main').classList.add('hidden');
+  document.getElementById('share-view').classList.remove('hidden');
+
+  const d = new Date();
+  document.getElementById('share-view-date').textContent =
+    `${d.getFullYear()}/${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')} 時点`;
+
+  const tbody = document.getElementById('share-table-body');
+  const emptyMsg = document.getElementById('share-empty-msg');
+
+  if (entries.length === 0) {
+    emptyMsg.classList.remove('hidden');
+    return;
+  }
+
+  tbody.innerHTML = entries.map(e => `
+    <tr>
+      <td style="white-space:nowrap">${esc(e.date)}</td>
+      <td>${esc(e.gym)}</td>
+      <td style="white-space:nowrap">${esc(e.time)}</td>
+      <td>${esc(e.className)}</td>
+      <td>${esc(e.requester)}</td>
+      <td>${esc(e.deputy)}</td>
+      <td style="white-space:nowrap">
+        <span class="status-badge ${e.status === 'open' ? 'status-open' : 'status-done'}">
+          <span class="material-icons-round">${e.status === 'open' ? 'pending' : 'check_circle'}</span>
+          ${e.status === 'open' ? '未決' : '対応済み'}
+        </span>
+      </td>
+      <td>${e.url ? `<a href="${esc(e.url)}" target="_blank" rel="noopener">調整さん</a>` : ''}</td>
+    </tr>
+  `).join('');
+}
 
 document.getElementById('qr-close-btn').addEventListener('click', () => {
   document.getElementById('qr-modal').classList.add('hidden');
@@ -892,5 +944,8 @@ document.getElementById('qr-modal').addEventListener('click', e => {
 });
 
 // ===== 初期描画 =====
-renderTable();
-loadHolidays(); // 非同期で祝日読み込み → 完了後 renderCalendars() が呼ばれる
+initShareView(); // #share= ハッシュがあれば共有ビューを表示（なければ通常UI）
+if (!location.hash.startsWith('#share=')) {
+  renderTable();
+  loadHolidays();
+}
