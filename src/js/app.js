@@ -224,10 +224,20 @@ function collectPreviewData() {
 }
 
 // ===== テーブル =====
+function getTodayKey() {
+  return dateToKey(new Date());
+}
+
 function getSortedEntries() {
   const entries = loadEntries();
-  const filterOpen = document.getElementById('filter-open').checked;
-  const filtered = filterOpen ? entries.filter(e => e.status === 'open') : entries;
+  const filterOpen   = document.getElementById('filter-open').checked;
+  const filterFuture = document.getElementById('filter-future').checked;
+  const todayKey = getTodayKey();
+  const filtered = entries.filter(e => {
+    if (filterOpen   && e.status !== 'open') return false;
+    if (filterFuture && e.date < todayKey)   return false;
+    return true;
+  });
   const { col, dir } = sortState;
   filtered.sort((a, b) => {
     const av = (a[col] || '').toLowerCase();
@@ -487,7 +497,8 @@ document.getElementById('register-btn').addEventListener('click', () => {
 });
 
 // ===== フィルター =====
-document.getElementById('filter-open').addEventListener('change', renderTable);
+document.getElementById('filter-open').addEventListener('change', () => { renderTable(); renderCalendars(); });
+document.getElementById('filter-future').addEventListener('change', () => { renderTable(); renderCalendars(); });
 
 // ===== タブ切替 =====
 document.querySelectorAll('.tab-btn').forEach(btn => {
@@ -531,8 +542,11 @@ function dateToKey(date) {
 }
 
 function entriesByDate() {
+  const filterFuture = document.getElementById('filter-future').checked;
+  const todayKey = getTodayKey();
   const map = {};
   for (const entry of loadEntries()) {
+    if (filterFuture && entry.date < todayKey) continue;
     if (!map[entry.date]) map[entry.date] = [];
     map[entry.date].push(entry);
   }
