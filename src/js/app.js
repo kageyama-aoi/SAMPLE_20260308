@@ -777,6 +777,10 @@ function printCalendar(target) {
     s.id = 'print-page-style';
     s.textContent = '@page { size: A4 landscape; margin: 1cm; }';
     document.head.appendChild(s);
+    // ファイル名用にタイトルにタイムスタンプを付与
+    const d = new Date();
+    const ts = `${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}_${String(d.getHours()).padStart(2,'0')}${String(d.getMinutes()).padStart(2,'0')}`;
+    document.title = `BRAFT代行一覧_${ts}`;
   } else {
     document.getElementById('print-page-style')?.remove();
     listTab.classList.add('hidden');
@@ -793,6 +797,7 @@ function printCalendar(target) {
 window.addEventListener('afterprint', () => {
   delete document.body.dataset.print;
   document.getElementById('print-page-style')?.remove();
+  document.title = 'BRAFT 代行情報整理';
   // 印刷後はタブ表示を元に戻す（アクティブタブのみ表示）
   const activeTab = document.querySelector('.tab-btn.active')?.dataset.tab;
   document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden'));
