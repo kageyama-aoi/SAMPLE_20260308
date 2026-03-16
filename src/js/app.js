@@ -797,6 +797,69 @@ document.getElementById('help-btn').addEventListener('click', () => {
   btn.setAttribute('aria-expanded', String(!isOpen));
 });
 
+// ===== QRコード生成 =====
+function buildShareHTML(entries) {
+  const rows = entries.map(e => {
+    const urlCell = e.url
+      ? `<a href="${esc(e.url)}" target="_blank">調整さん</a>`
+      : '';
+    const statusLabel = e.status === 'open' ? '⚠️未決' : '✅済';
+    return `<tr><td>${esc(e.date)}</td><td>${esc(e.gym)}</td><td>${esc(e.time)}</td><td>${esc(e.className)}</td><td>${esc(e.requester)}</td><td>${esc(e.deputy)}</td><td>${statusLabel}</td><td>${urlCell}</td></tr>`;
+  }).join('');
+  return `<!DOCTYPE html><html lang="ja"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>BRAFT代行一覧</title><style>body{font-family:sans-serif;font-size:13px;padding:10px}h2{margin-bottom:8px;font-size:1rem}table{border-collapse:collapse;width:100%}th,td{border:1px solid #ccc;padding:4px 6px;text-align:left;vertical-align:top}th{background:#f0f0f0;white-space:nowrap}a{color:#1565c0}</style></head><body><h2>BRAFT代行一覧</h2><table><thead><tr><th>日付</th><th>ジム</th><th>時間</th><th>クラス</th><th>依頼者</th><th>代行者</th><th>状態</th><th>URL</th></tr></thead><tbody>${rows}</tbody></table></body></html>`;
+}
+
+document.getElementById('qr-btn').addEventListener('click', () => {
+  const entries = loadEntries();
+  const modal   = document.getElementById('qr-modal');
+  const wrap    = document.getElementById('qr-canvas-wrap');
+  const errEl   = document.getElementById('qr-error');
+
+  wrap.innerHTML = '';
+  errEl.classList.add('hidden');
+
+  if (entries.length === 0) {
+    errEl.textContent = '登録されたデータがありません。';
+    errEl.classList.remove('hidden');
+    modal.classList.remove('hidden');
+    return;
+  }
+
+  const html    = buildShareHTML(entries);
+  const dataUrl = 'data:text/html;charset=utf-8,' + encodeURIComponent(html);
+
+  // QRコードの上限は約2953バイト（バイナリL）。大きすぎる場合は警告
+  if (dataUrl.length > 2800) {
+    errEl.textContent = `データが多すぎてQRコードを生成できません（${entries.length}件）。フィルターで件数を絞ってからお試しください。`;
+    errEl.classList.remove('hidden');
+    modal.classList.remove('hidden');
+    return;
+  }
+
+  const canvas = document.createElement('canvas');
+  wrap.appendChild(canvas);
+
+  QRCode.toCanvas(canvas, dataUrl, { width: 256, errorCorrectionLevel: 'L' }, err => {
+    if (err) {
+      wrap.innerHTML = '';
+      errEl.textContent = 'QRコードの生成に失敗しました。';
+      errEl.classList.remove('hidden');
+    }
+  });
+
+  modal.classList.remove('hidden');
+});
+
+document.getElementById('qr-close-btn').addEventListener('click', () => {
+  document.getElementById('qr-modal').classList.add('hidden');
+});
+
+document.getElementById('qr-modal').addEventListener('click', e => {
+  if (e.target === document.getElementById('qr-modal')) {
+    document.getElementById('qr-modal').classList.add('hidden');
+  }
+});
+
 // ===== 初期描画 =====
 renderTable();
 loadHolidays(); // 非同期で祝日読み込み → 完了後 renderCalendars() が呼ばれる

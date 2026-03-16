@@ -752,3 +752,57 @@ main {
 
   .json-btns .btn span { display: none; }
 }
+
+/* ===== QRコードモーダル ===== */
+.qr-modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
+}
+
+.qr-modal.hidden { display: none; }
+
+.qr-modal-inner {
+  background: #fff;
+  border-radius: 14px;
+  padding: 28px 32px;
+  max-width: 340px;
+  width: 90%;
+  text-align: center;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+}
+
+.qr-modal-inner h2 {
+  font-size: 1.1rem;
+  margin-bottom: 8px;
+  color: #2c3e50;
+}
+
+.qr-modal-desc {
+  font-size: 0.82rem;
+  color: #666;
+  margin-bottom: 20px;
+  line-height: 1.5;
+}
+
+#qr-canvas-wrap {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 16px;
+}
+
+#qr-canvas-wrap canvas {
+  border-radius: 8px;
+  border: 1px solid #eee;
+}
+
+.qr-error {
+  color: #c62828;
+  font-size: 0.82rem;
+  margin-bottom: 12px;
+  line-height: 1.5;
+}
