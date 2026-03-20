@@ -26,7 +26,6 @@ async function loadHolidays() {
   renderCalendars();
 }
 
-function isHoliday(dateKey) { return !!holidayMap[dateKey]; }
 function getHolidayName(dateKey) { return holidayMap[dateKey] || ''; }
 
 function setHolidayStatus(msg, isError = false) {
@@ -180,7 +179,7 @@ function normalizeDate(str) {
 
 function guessYear(month) {
   const n = new Date();
-  return month < n.getMonth() ? n.getFullYear() + 1 : n.getFullYear();
+  return month < n.getMonth() + 1 ? n.getFullYear() + 1 : n.getFullYear();
 }
 
 function generateId() {
@@ -674,7 +673,6 @@ function renderWeekCalendar() {
 
   // 月〜日の順
   const dowLabels = ['月','火','水','木','金','土','日'];
-  const dowDays   = [1, 2, 3, 4, 5, 6, 0]; // getDay()対応
 
   for (let i = 0; i < 7; i++) {
     const date    = new Date(calWeekStart);
