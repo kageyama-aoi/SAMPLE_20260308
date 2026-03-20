@@ -861,6 +861,14 @@ document.getElementById('qr-btn').addEventListener('click', () => {
     return;
   }
 
+  // QRCodeライブラリ未ロードチェック
+  if (typeof QRCode === 'undefined') {
+    errEl.textContent = 'QRコードライブラリの読み込みに失敗しました。インターネット接続を確認してください。';
+    errEl.classList.remove('hidden');
+    modal.classList.remove('hidden');
+    return;
+  }
+
   const shareUrl = buildShareUrl(entries);
 
   if (shareUrl.length > 2900) {
@@ -869,6 +877,8 @@ document.getElementById('qr-btn').addEventListener('click', () => {
     modal.classList.remove('hidden');
     return;
   }
+
+  modal.classList.remove('hidden'); // 先にモーダルを開く
 
   const canvas = document.createElement('canvas');
   wrap.appendChild(canvas);
@@ -880,8 +890,6 @@ document.getElementById('qr-btn').addEventListener('click', () => {
       errEl.classList.remove('hidden');
     }
   });
-
-  modal.classList.remove('hidden');
 });
 
 // ===== 共有ビュー（#share= で開いた時） =====
